@@ -66,7 +66,26 @@ const parseXMLFile = async (file) => {
 
 // Parse tab-separated text format from Apple Music
 const parseTXTFile = async (file) => {
-  const text = await file.text();
+  // Read file as ArrayBuffer to detect encoding
+  const buffer = await file.arrayBuffer();
+  const uint8Array = new Uint8Array(buffer);
+
+  // Detect UTF-16 BOM (Byte Order Mark)
+  let text;
+  if (uint8Array[0] === 0xFF && uint8Array[1] === 0xFE) {
+    // UTF-16 LE (Little Endian) - most common for Apple Music exports
+    const decoder = new TextDecoder('utf-16le');
+    text = decoder.decode(buffer);
+  } else if (uint8Array[0] === 0xFE && uint8Array[1] === 0xFF) {
+    // UTF-16 BE (Big Endian)
+    const decoder = new TextDecoder('utf-16be');
+    text = decoder.decode(buffer);
+  } else {
+    // Default to UTF-8
+    const decoder = new TextDecoder('utf-8');
+    text = decoder.decode(buffer);
+  }
+
   const lines = text.split('\n').filter(line => line.trim());
 
   if (lines.length === 0) {
