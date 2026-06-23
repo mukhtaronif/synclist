@@ -86,7 +86,8 @@ const parseTXTFile = async (file) => {
     text = decoder.decode(buffer);
   }
 
-  const lines = text.split('\n').filter(line => line.trim());
+  // Split by various line endings (Windows \r\n, Unix \n, or Mac \r)
+  const lines = text.split(/\r?\n|\r/).filter(line => line.trim());
 
   if (lines.length === 0) {
     throw new Error('The text file is empty.');
@@ -97,14 +98,16 @@ const parseTXTFile = async (file) => {
 
   // Find the indices for Name and Artist columns
   const nameIndex = header.findIndex(col =>
-    col.toLowerCase().includes('name') || col.toLowerCase().includes('title')
+    col.toLowerCase().trim().includes('name') || col.toLowerCase().trim().includes('title')
   );
   const artistIndex = header.findIndex(col =>
-    col.toLowerCase().includes('artist')
+    col.toLowerCase().trim().includes('artist')
   );
 
   if (nameIndex === -1 || artistIndex === -1) {
-    throw new Error('Could not find Name and Artist columns in the text file. Please ensure the file has proper headers.');
+    console.error('Header columns:', header);
+    console.error('Name index:', nameIndex, 'Artist index:', artistIndex);
+    throw new Error(`Could not find Name and Artist columns. Found columns: ${header.slice(0, 5).join(', ')}`);
   }
 
   const tracks = [];
@@ -125,7 +128,9 @@ const parseTXTFile = async (file) => {
   }
 
   if (tracks.length === 0) {
-    throw new Error('No valid tracks found in the text file.');
+    console.error('Total lines:', lines.length);
+    console.error('Sample line:', lines[1]?.split('\t').slice(0, 3));
+    throw new Error(`No valid tracks found. Parsed ${lines.length - 1} lines but found no tracks with both name and artist.`);
   }
 
   return tracks;
